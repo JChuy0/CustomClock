@@ -1,3 +1,14 @@
+/*
+  I'm building my own alarm clock so I can customize both the functionality and the appearance.
+  Author: JC
+  Date started: December 13, 2025
+
+  Brief summary:
+    The encoder button navigates the menu, and rotation adjusts the value.
+
+  Thanks to the Arduino Discord server for advice and assistance.
+*/
+
 // include the library code:
 #include <RTClib.h>
 #include <LiquidCrystal.h>
@@ -9,182 +20,139 @@ LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 #define ENCODER_DT 4
 #define ENCODER_BTN 3
 
-int hour = 0;
-int minute = 0;
+// Variables
+int updateHour = 0;
+int updateMinute = 0;
 int menu = 0;
+int num = 0;
+bool isActive = false;
+volatile uint64_t lastPulse;
 
 void setup() {
-  // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
-  // Print a message to the LCD.
-  // lcd.print("Hello, World!");
   Serial.begin(9600);
 
   pinMode(ENCODER_CLK, INPUT);
   pinMode(ENCODER_DT, INPUT);
   pinMode(ENCODER_BTN, INPUT_PULLUP);
-//  attachInterrupt(digitalPinToInterrupt(ENCODER_CLK), readEncoder, FALLING);
-//  attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), readBtn, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_CLK), readEncoder, FALLING);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), readBtn, FALLING);
 
   if (!rtc.begin()) {
     Serial.println("Could not find RTC");
     while (1);
   }
-  
+
+  // rtc.adjust(DateTime(2025, 12, 22, 20, 25, 0));
+
   if (!rtc.isrunning()) {
-    Serial.println("RTC not working!");
-    // Set the date and time to the date and time this sketch was compiled
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // You can set the date and time to a specific date / time
-    // rtc.adjust(DateTime(2024, 3, 23, 11, 15, 0));
+    // Sets time to January 1st, 2025
+    rtc.adjust(DateTime(2025, 1, 1, 1, 0, 0));
   }
 }
-
-void loop() {
-  // print the number of seconds since reset:
-  // lcd.print(millis() / 1000);
-
-  UpdateLCD();
-
-  if(digitalRead(ENCODER_BTN) == LOW) {
-    ChangeTime();
-  }
-
-
-  delay(1000);
-}
-
-void ChangeTime() {
-  SetHour();
-  SetMinute();
-  rtc.adjust(DateTime(2024, 3, 23, hour, minute, 0));
-}
-
-
-int SetHour() {
-  bool isActive = true;
-  Serial.println("Entered set hour func.");
-
-  do{
-
-    if (digitalRead(ENCODER_CLK) == LOW){
-      if (hour == 23) {
-        hour = 0;
-      } else {
-        hour++;
-      }
-    }
-
-    if (digitalRead(ENCODER_DT) == LOW){
-      if (hour == 0) {
-        hour = 23;
-      } else {
-        hour--;
-      }
-    }
-
-    if (digitalRead(ENCODER_BTN) == LOW) {
-      Serial.print("Hour is: ");
-      Serial.println(hour);
-      isActive = false;
-    }
-
-    lcd.setCursor(0,0);
-    lcd.print("Set time:");
-    lcd.setCursor(0,1);
-    lcd.print(hour, DEC);
-    delay(200);
-
-  } while (isActive);
-  
-  Serial.println("Exited while loop.");
-}
-
-
-int SetMinute() {
-  bool isActive = true;
-  Serial.println("Entered set minute func.");
-
-  do{
-
-    if (digitalRead(ENCODER_CLK) == LOW){
-      if (minute == 59) {
-        minute = 0;
-      } else {
-        minute++;
-      }
-    }
-
-    if (digitalRead(ENCODER_DT) == LOW){
-      if (minute == 0) {
-        minute = 59;
-      } else {
-        minute--;
-      }
-    }
-
-    if (digitalRead(ENCODER_BTN) == LOW) {
-      Serial.print("Minute is: ");
-      Serial.println(minute);
-      isActive = false;
-    }
-
-    lcd.setCursor(0,0);
-    lcd.print("Set time:");
-    lcd.setCursor(0,1);
-    lcd.print(minute, DEC);
-    delay(200);
-
-  } while (isActive);
-  
-  Serial.println("Exited while loop.");
-}
-
 
 void readBtn() {
-  int btn = digitalRead(ENCODER_BTN);
+  uint64_t now = millis();
+  num = 0;
 
-  if (btn == LOW) {
-    Serial.println("Button pressed.");
+  if (now - lastPulse >= 2000) {
+    menu++;
+    isActive = true;
   }
+
 }
 
 void readEncoder() {
-  int dtValue = digitalRead(ENCODER_DT);
+  uint64_t now = millis();
 
-  if (dtValue == HIGH) {
-    Serial.println("Rotated clockwise ⏩");
-  }
-  if (dtValue == LOW) {
-    Serial.println("Rotated counterclockwise ⏪");
+  if(now - lastPulse >= 500) {
+    lastPulse = now;
+
+    if (digitalRead(ENCODER_DT)) {
+      num++;
+    } else {
+      num--;
+    }
   }
 
 }
 
-void UpdateLCD(){
+void loop() {
+  if (menu == 0) {
+    DisplayClock();
+  } else if (menu == 1) {
+    DisplaySetHour();
+  } else if (menu == 2) {
+    DisplaySetMinute();
+  } else {
+    UpdateRTC();
+    menu = 0;
+  } 
+}
+
+void UpdateRTC() {
+  rtc.adjust(DateTime(2025, 12, 22, updateHour, updateMinute, 0));
+  lcd.clear();
+}
+
+void DisplaySetHour() {
+  lcd.clear();
+
+  // I created a datatime object and grabbed all the data I needed from it to avoid creating a new datatime object in each subsequent method.
+  if (isActive) {
+    DateTime now = rtc.now(); 
+    updateHour = now.hour();
+    updateMinute = now.minute();
+    isActive = false;
+  }
+
+  updateHour += num;
+  num = 0;
+
+  if (updateHour > 23) {
+    updateHour = 0;
+  } else if (updateHour < 0) {
+    updateHour = 23;
+  }
+
+  lcd.setCursor(0,0);
+  lcd.print("Set hour:");
+  lcd.setCursor(0,1);
+  lcd.print(updateHour);
+  delay(200);
+}
+
+void DisplaySetMinute() {
+  lcd.clear();
+
+  updateMinute += num;
+  num = 0;
+
+  if (updateMinute > 59) {
+    updateMinute = 0;
+  } else if (updateMinute < 0) {
+    updateMinute = 59;
+  }
+
+  lcd.setCursor(0,0);
+  lcd.print("Set minute:");
+  lcd.setCursor(0,1);
+  lcd.print(updateMinute);
+  delay(200);
+}
+
+
+void DisplayClock(){
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
   DateTime now = rtc.now();
   lcd.setCursor(0, 1);
 
-  int hour;
-  String ampm;
-
-  if (now.hour() > 12) {
-    hour = now.hour() - 12;
-  }
-
-  if (now.hour() >= 12) {
-    ampm = "PM";
-  } else {
-    ampm = "AM";
-  }
-
-  if (hour < 10) {
+  if (now.hour() < 10) {
     lcd.print(' ');
   }
 
-  lcd.print(hour);
+  lcd.print(now.hour());
   lcd.print(':');
 
   if (now.minute() < 10) {
@@ -199,5 +167,4 @@ void UpdateLCD(){
   }
 
   lcd.print(now.second());
-  lcd.print(ampm);
 }
