@@ -9,11 +9,11 @@
   Thanks to the Arduino Discord server for advice and assistance.
 */
 
-// include the library code:
+// Libraries
 #include <RTClib.h>
 #include <LiquidCrystal.h>
 
-// initialize the library with the numbers of the interface pins
+// Initialize the pins
 RTC_DS1307 rtc;
 LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 #define ENCODER_CLK 2
@@ -21,12 +21,31 @@ LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 #define ENCODER_BTN 3
 
 // Variables
-int updateHour = 0;
-int updateMinute = 0;
+int updateClockHour = 0;
+int updateClockMinute = 0;
+int clockSecond = 0;
+int alarmHour = 13;
+int alarmMinute = 12;
+
 int menu = 0;
 int num = 0;
 bool isActive = false;
+bool isAlarmOn = false;
+bool isAlarmRinging = false;
 volatile uint64_t lastPulse;
+
+// Set up the notes and melody
+#define NOTE_C4  262
+#define NOTE_G3  196
+
+int noteDurations[] = {
+  4, 8, 4, 8, 4, 8, 4, 8
+};
+
+int melody[] = {
+  NOTE_C4, NOTE_G3, NOTE_C4, NOTE_G3, NOTE_C4, NOTE_G3, NOTE_C4, NOTE_G3
+};
+
 
 void setup() {
   lcd.begin(16, 2);
@@ -36,14 +55,16 @@ void setup() {
   pinMode(ENCODER_DT, INPUT);
   pinMode(ENCODER_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(ENCODER_CLK), readEncoder, FALLING);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), readBtn, FALLING);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), readButton, FALLING);
+
+  isAlarmOn = true;
 
   if (!rtc.begin()) {
     Serial.println("Could not find RTC");
     while (1);
   }
 
-  // rtc.adjust(DateTime(2025, 12, 22, 20, 25, 0));
+  // rtc.adjust(DateTime(2025, 12, 28, 13, 40, 0));
 
   if (!rtc.isrunning()) {
     // Sets time to January 1st, 2025
@@ -51,16 +72,23 @@ void setup() {
   }
 }
 
-void readBtn() {
+void readButton() {
   uint64_t now = millis();
   num = 0;
 
-  if (now - lastPulse >= 2000) {
+  if ((now - lastPulse >= 1000)) {
+    lastPulse = now;
     menu++;
     isActive = true;
   }
 
+  if (isAlarmRinging) {
+    isAlarmRinging = false;
+    menu = 0;
+  }
+
 }
+
 
 void readEncoder() {
   uint64_t now = millis();
@@ -78,12 +106,20 @@ void readEncoder() {
 }
 
 void loop() {
+
   if (menu == 0) {
     DisplayClock();
+    CheckAlarm();
   } else if (menu == 1) {
     DisplaySetHour();
   } else if (menu == 2) {
     DisplaySetMinute();
+  } else if (menu == 3) {
+    SetAlarmHour();
+  } else if (menu == 4) {
+    SetAlarmMinute();
+  } else if (menu == 5) {
+    TurnAlarmOnOff();
   } else {
     UpdateRTC();
     menu = 0;
@@ -91,8 +127,56 @@ void loop() {
 }
 
 void UpdateRTC() {
-  rtc.adjust(DateTime(2025, 12, 22, updateHour, updateMinute, 0));
+  rtc.adjust(DateTime(2025, 12, 22, updateClockHour, updateClockMinute, clockSecond));
   lcd.clear();
+}
+
+void CheckAlarm() {
+  DateTime now = rtc.now();
+
+  if (isAlarmOn && (now.hour() == alarmHour) && (now.minute() == alarmMinute) && (now.second() == 0) ) {
+    isAlarmRinging = true;
+  }
+
+  if (isAlarmRinging) {
+    AlarmBuzzer();
+  }
+
+}
+
+void AlarmBuzzer() {
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+    int noteDuration = 1000 / noteDurations[thisNote];
+
+    // pin number, sound to play, duration
+    tone(5, melody[thisNote], noteDuration);
+
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(5);
+  }
+}
+
+void TurnAlarmOnOff() {
+  lcd.clear();
+
+  if (num != 0) {
+    isAlarmOn = !isAlarmOn;
+    num = 0;
+  }
+
+  lcd.setCursor(0,0);
+  lcd.print("Alarm is:");
+  lcd.setCursor(0,1);
+
+  if (isAlarmOn) {
+    lcd.print("On");
+  } else {
+    lcd.print("Off");
+  }
+
+  delay(200);
 }
 
 void DisplaySetHour() {
@@ -101,43 +185,82 @@ void DisplaySetHour() {
   // I created a datatime object and grabbed all the data I needed from it to avoid creating a new datatime object in each subsequent method.
   if (isActive) {
     DateTime now = rtc.now(); 
-    updateHour = now.hour();
-    updateMinute = now.minute();
+    updateClockHour = now.hour();
+    updateClockMinute = now.minute();
     isActive = false;
   }
 
-  updateHour += num;
+  updateClockHour += num;
   num = 0;
 
-  if (updateHour > 23) {
-    updateHour = 0;
-  } else if (updateHour < 0) {
-    updateHour = 23;
+  if (updateClockHour > 23) {
+    updateClockHour = 0;
+  } else if (updateClockHour < 0) {
+    updateClockHour = 23;
   }
 
   lcd.setCursor(0,0);
   lcd.print("Set hour:");
   lcd.setCursor(0,1);
-  lcd.print(updateHour);
+  lcd.print(updateClockHour);
   delay(200);
 }
 
 void DisplaySetMinute() {
   lcd.clear();
 
-  updateMinute += num;
+  updateClockMinute += num;
   num = 0;
 
-  if (updateMinute > 59) {
-    updateMinute = 0;
-  } else if (updateMinute < 0) {
-    updateMinute = 59;
+  if (updateClockMinute > 59) {
+    updateClockMinute = 0;
+  } else if (updateClockMinute < 0) {
+    updateClockMinute = 59;
   }
 
   lcd.setCursor(0,0);
   lcd.print("Set minute:");
   lcd.setCursor(0,1);
-  lcd.print(updateMinute);
+  lcd.print(updateClockMinute);
+  delay(200);
+}
+
+
+void SetAlarmHour() {
+  lcd.clear();
+
+  alarmHour += num;
+  num = 0;
+
+  if (alarmHour > 23) {
+    alarmHour = 0;
+  } else if (alarmHour < 0) {
+    alarmHour = 23;
+  }
+
+  lcd.setCursor(0,0);
+  lcd.print("Set alarm hour:");
+  lcd.setCursor(0,1);
+  lcd.print(alarmHour);
+  delay(200);
+}
+
+void SetAlarmMinute() {
+  lcd.clear();
+
+  alarmMinute += num;
+  num = 0;
+
+  if (alarmMinute > 59) {
+    alarmMinute = 0;
+  } else if (alarmMinute < 0) {
+    alarmMinute = 59;
+  }
+
+  lcd.setCursor(0,0);
+  lcd.print("Set alarm minute:");
+  lcd.setCursor(0,1);
+  lcd.print(alarmMinute);
   delay(200);
 }
 
@@ -167,4 +290,21 @@ void DisplayClock(){
   }
 
   lcd.print(now.second());
+
+  // display alarm timer
+  lcd.setCursor(11, 1);
+
+  lcd.print(alarmHour);
+  lcd.print(':');
+  lcd.print(alarmMinute);
+
+  // Display if alarm is on or off
+  lcd.setCursor(11, 0);
+
+  if (isAlarmOn) {
+    lcd.print("On");
+  } else {
+    lcd.print("Off");
+  }
+
 }
