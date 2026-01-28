@@ -4,21 +4,23 @@
   Date started: December 13, 2025
 
   Brief summary:
-    The encoder button navigates the menu, and rotation adjusts the value.
+    An encoder button navigates through the menu, and rotating the knob adjusts the value.
 
-  Thanks to the Arduino Discord server for advice and assistance.
+  Thanks to the Arduino Discord server for their advice and assistance.
 */
 
 // Libraries
-#include <RTClib.h>
-#include <LiquidCrystal.h>
+#include "Wire.h"
+#include "SPI.h"
+#include "TFT_eSPI.h"
+#include "RTClib.h"
 
 // Initialize the pins
+TFT_eSPI tft = TFT_eSPI();
 RTC_DS1307 rtc;
-LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
-#define ENCODER_CLK 2
-#define ENCODER_DT 4
-#define ENCODER_BTN 3
+#define ENCODER_CLK 25
+#define ENCODER_DT 26
+#define ENCODER_BTN 27
 
 // Variables
 int updateClockHour = 0;
@@ -48,8 +50,9 @@ int melody[] = {
 
 
 void setup() {
-  lcd.begin(16, 2);
   Serial.begin(9600);
+  tft.init();
+  Wire.begin(21, 22);
 
   pinMode(ENCODER_CLK, INPUT);
   pinMode(ENCODER_DT, INPUT);
@@ -64,12 +67,20 @@ void setup() {
     while (1);
   }
 
+  Serial.println("Test 1");
+
   // rtc.adjust(DateTime(2025, 12, 28, 13, 40, 0));
 
   if (!rtc.isrunning()) {
     // Sets time to January 1st, 2025
     rtc.adjust(DateTime(2025, 1, 1, 1, 0, 0));
   }
+
+  Serial.println("Test 2");
+
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.setRotation(3);
 }
 
 void readButton() {
@@ -123,12 +134,16 @@ void loop() {
   } else {
     UpdateRTC();
     menu = 0;
-  } 
+  }
+
+  delay(1000);
+
 }
+
 
 void UpdateRTC() {
   rtc.adjust(DateTime(2025, 12, 22, updateClockHour, updateClockMinute, clockSecond));
-  lcd.clear();
+  tft.fillScreen(TFT_BLACK);
 }
 
 void CheckAlarm() {
@@ -159,28 +174,31 @@ void AlarmBuzzer() {
 }
 
 void TurnAlarmOnOff() {
-  lcd.clear();
+  tft.fillScreen(TFT_BLACK);
 
   if (num != 0) {
     isAlarmOn = !isAlarmOn;
     num = 0;
   }
 
-  lcd.setCursor(0,0);
-  lcd.print("Alarm is:");
-  lcd.setCursor(0,1);
+  tft.drawString("turn alarm on/off", 0, 0, 2);
+
+
+  // lcd.setCursor(0,0);
+  // lcd.print("Alarm is:");
+  // lcd.setCursor(0,1);
 
   if (isAlarmOn) {
-    lcd.print("On");
+    // lcd.print("On");
   } else {
-    lcd.print("Off");
+    // lcd.print("Off");
   }
 
   delay(200);
 }
 
 void DisplaySetHour() {
-  lcd.clear();
+  tft.fillScreen(TFT_BLACK);
 
   // I created a datatime object and grabbed all the data I needed from it to avoid creating a new datatime object in each subsequent method.
   if (isActive) {
@@ -199,15 +217,25 @@ void DisplaySetHour() {
     updateClockHour = 23;
   }
 
-  lcd.setCursor(0,0);
-  lcd.print("Set hour:");
-  lcd.setCursor(0,1);
-  lcd.print(updateClockHour);
+
+
+  // set text size and color
+  // set cursor position
+  // print text
+
+  // tft.setTextSize(5);
+  // tft.setTextColor(TFT_GREEN, TFT_BLACK);   // Set text color to green and padding to back
+  // tft.setCursor(0, 15);
+
+  // tft.print("Set hour:");
+  // tft.setCursor(0,100);
+  // tft.print(updateClockHour);
+
   delay(200);
 }
 
 void DisplaySetMinute() {
-  lcd.clear();
+  tft.fillScreen(TFT_BLACK);
 
   updateClockMinute += num;
   num = 0;
@@ -218,16 +246,26 @@ void DisplaySetMinute() {
     updateClockMinute = 59;
   }
 
-  lcd.setCursor(0,0);
-  lcd.print("Set minute:");
-  lcd.setCursor(0,1);
-  lcd.print(updateClockMinute);
+  char buffer[7];
+  itoa(updateClockMinute, buffer, 10);
+
+  tft.drawString("set clock minute", 0, 0, 2);
+  tft.drawString(buffer, 0, 100, 2);
+
+  // tft.setTextSize(5);
+  // tft.setTextColor(TFT_GREEN, TFT_BLACK);   // Set text color to green and padding to back
+  // tft.setCursor(0, 15);
+
+  // tft.print("Set minute:");
+  // tft.setCursor(0,100);
+  // tft.print(updateClockMinute);
+
   delay(200);
 }
 
 
 void SetAlarmHour() {
-  lcd.clear();
+  tft.fillScreen(TFT_BLACK);
 
   alarmHour += num;
   num = 0;
@@ -238,15 +276,17 @@ void SetAlarmHour() {
     alarmHour = 23;
   }
 
-  lcd.setCursor(0,0);
-  lcd.print("Set alarm hour:");
-  lcd.setCursor(0,1);
-  lcd.print(alarmHour);
+  tft.drawString("set alarm hour", 0, 0, 2);
+
+  // lcd.setCursor(0,0);
+  // lcd.print("Set alarm hour:");
+  // lcd.setCursor(0,1);
+  // lcd.print(alarmHour);
   delay(200);
 }
 
 void SetAlarmMinute() {
-  lcd.clear();
+  tft.fillScreen(TFT_BLACK);
 
   alarmMinute += num;
   num = 0;
@@ -257,54 +297,32 @@ void SetAlarmMinute() {
     alarmMinute = 59;
   }
 
-  lcd.setCursor(0,0);
-  lcd.print("Set alarm minute:");
-  lcd.setCursor(0,1);
-  lcd.print(alarmMinute);
+  tft.drawString("set alarm minute", 0, 0, 2);
+
+  // lcd.setCursor(0,0);
+  // lcd.print("Set alarm minute:");
+  // lcd.setCursor(0,1);
+  // lcd.print(alarmMinute);
   delay(200);
 }
 
 
 void DisplayClock(){
-  // set the cursor to column 0, line 1
-  // (note: line 1 is the second row, since counting begins with 0):
   DateTime now = rtc.now();
-  lcd.setCursor(0, 1);
 
-  if (now.hour() < 10) {
-    lcd.print(' ');
-  }
+  tft.setTextSize(2);
 
-  lcd.print(now.hour());
-  lcd.print(':');
+  char timeStr[9];
+  sprintf(timeStr, "%2d:%02d:%02d", now.hour(), now.minute(), now.second());
 
-  if (now.minute() < 10) {
-    lcd.print(0);
-  }
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString(timeStr, 0, 0, 4);
 
-  lcd.print(now.minute());
-  lcd.print(':');
-
-  if (now.second() < 10) {
-    lcd.print(0);
-  }
-
-  lcd.print(now.second());
-
-  // display alarm timer
-  lcd.setCursor(11, 1);
-
-  lcd.print(alarmHour);
-  lcd.print(':');
-  lcd.print(alarmMinute);
-
-  // Display if alarm is on or off
-  lcd.setCursor(11, 0);
-
+  // // Display if alarm is on or off
   if (isAlarmOn) {
-    lcd.print("On");
+    tft.drawString("On", 100, 200, 4);
   } else {
-    lcd.print("Off");
+    tft.drawString("Off", 100, 200, 4);
   }
 
 }
