@@ -7,6 +7,7 @@
     An encoder button navigates through the menu, and rotating the knob adjusts the value.
 
   Thanks to the Arduino Discord server for their advice and assistance.
+
 */
 
 // Libraries
@@ -14,10 +15,12 @@
 #include "SPI.h"
 #include "TFT_eSPI.h"
 #include "RTClib.h"
+#include "Adafruit_BME680.h"
 
 // Initialize the pins
 TFT_eSPI tft = TFT_eSPI();
 RTC_DS1307 rtc;
+Adafruit_BME680 bme; // I2C
 #define ENCODER_CLK 25
 #define ENCODER_DT 26
 #define ENCODER_BTN 27
@@ -26,15 +29,16 @@ RTC_DS1307 rtc;
 int updateClockHour = 0;
 int updateClockMinute = 0;
 int clockSecond = 0;
-int alarmHour = 13;
-int alarmMinute = 12;
-
+int alarmHour = 0;
+int alarmMinute = 0;
 int menu = 0;
 int num = 0;
+
 bool isActive = false;
 bool isAlarmOn = false;
 bool isAlarmRinging = false;
 volatile uint64_t lastPulse;
+volatile uint64_t lastBMEReading;
 
 // Set up the notes and melody
 #define NOTE_C4  262
@@ -51,6 +55,9 @@ int melody[] = {
 
 void setup() {
   Serial.begin(9600);
+  while(!Serial);
+  Serial.println(F("BME680 async test"));
+
   tft.init();
   Wire.begin(21, 22);
 
@@ -67,64 +74,89 @@ void setup() {
     while (1);
   }
 
-  Serial.println("Test 1");
-
-  // rtc.adjust(DateTime(2025, 12, 28, 13, 40, 0));
-
   if (!rtc.isrunning()) {
     // Sets time to January 1st, 2025
     rtc.adjust(DateTime(2025, 1, 1, 1, 0, 0));
   }
 
-  Serial.println("Test 2");
-
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
   tft.setRotation(3);
+
+  if (!bme.begin()) {
+    Serial.println(F("Could not find a valid BME680 sensor, check wiring!"));
+    while (1);
+  }
+
+  // Set up oversampling and filter initialization
+  bme.setTemperatureOversampling(BME680_OS_8X);
+  bme.setHumidityOversampling(BME680_OS_2X);
+
+  // testAlarm();
 }
 
+
+void testAlarm() {
+  // year month day hour minute second
+  rtc.adjust(DateTime(2025, 1, 1, 18, 44, 40));
+
+  alarmHour = 18;
+  alarmMinute = 45;
+}
+
+
 void readButton() {
-  uint64_t now = millis();
+  unsigned long now = millis();
   num = 0;
 
-  if ((now - lastPulse >= 1000)) {
+  // Debounce: filter out button noise, ensure code is only run once per press
+  if (now - lastPulse >= 1000) {
     lastPulse = now;
     menu++;
     isActive = true;
   }
 
+  // Turns alarm off when button is pressed
   if (isAlarmRinging) {
     isAlarmRinging = false;
     menu = 0;
   }
-
 }
 
 
 void readEncoder() {
-  uint64_t now = millis();
+  unsigned long now = millis();
 
+  // Debounce: filter out encoder noise, ensure code is only run once per twist
   if(now - lastPulse >= 500) {
     lastPulse = now;
 
+    // Check rotation direction based on DT pin state
     if (digitalRead(ENCODER_DT)) {
       num++;
     } else {
       num--;
     }
   }
-
 }
 
 void loop() {
+  unsigned long now = millis();
 
   if (menu == 0) {
     DisplayClock();
     CheckAlarm();
+
+    // Get new data every 10 minutes
+    if(now - lastBMEReading >= 1000) {
+      lastBMEReading = now;
+      ReadBME680();
+    }
+
   } else if (menu == 1) {
-    DisplaySetHour();
+    SetClockHour();
   } else if (menu == 2) {
-    DisplaySetMinute();
+    SetClockMinute();
   } else if (menu == 3) {
     SetAlarmHour();
   } else if (menu == 4) {
@@ -136,13 +168,33 @@ void loop() {
     menu = 0;
   }
 
-  delay(1000);
-
 }
 
+void ReadBME680() {
+  char temperature[20];
+  char humidity[20];
+  unsigned long endTime = bme.beginReading();
 
+  // Get measurement results from BME680.
+    if (!bme.endReading()) {
+    Serial.println(F("Failed to complete reading :("));
+    return;
+  }
+
+  sprintf(temperature, "%.1f C", bme.temperature);
+  sprintf(humidity, "%.1f %", bme.humidity);
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Temperature:", 0, 0);
+  tft.drawString(temperature, 25, 20, 2);
+
+  tft.drawString("Humidity:", 180, 0);
+  tft.drawString(humidity, 195, 20, 2);
+}
+
+// Updates the time on the clock module
 void UpdateRTC() {
-  rtc.adjust(DateTime(2025, 12, 22, updateClockHour, updateClockMinute, clockSecond));
+  rtc.adjust(DateTime(2025, 1, 1, updateClockHour, updateClockMinute, clockSecond));
   tft.fillScreen(TFT_BLACK);
 }
 
@@ -164,48 +216,40 @@ void AlarmBuzzer() {
     int noteDuration = 1000 / noteDurations[thisNote];
 
     // pin number, sound to play, duration
-    tone(5, melody[thisNote], noteDuration);
+    tone(33, melody[thisNote], noteDuration);
 
     int pauseBetweenNotes = noteDuration * 1.30;
     delay(pauseBetweenNotes);
     // stop the tone playing:
-    noTone(5);
+    noTone(33);
   }
 }
 
-void TurnAlarmOnOff() {
-  tft.fillScreen(TFT_BLACK);
 
+void TurnAlarmOnOff() {
   if (num != 0) {
     isAlarmOn = !isAlarmOn;
     num = 0;
   }
 
-  tft.drawString("turn alarm on/off", 0, 0, 2);
-
-
-  // lcd.setCursor(0,0);
-  // lcd.print("Alarm is:");
-  // lcd.setCursor(0,1);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Alarm is:", 0, 0, 2);
 
   if (isAlarmOn) {
-    // lcd.print("On");
+    tft.drawString("On", 0, 100, 2);
   } else {
-    // lcd.print("Off");
+    tft.drawString("Off", 0, 100, 2);
   }
-
-  delay(200);
 }
 
-void DisplaySetHour() {
-  tft.fillScreen(TFT_BLACK);
-
-  // I created a datatime object and grabbed all the data I needed from it to avoid creating a new datatime object in each subsequent method.
+void SetClockHour() {
+  // This ensures the current time is displayed when the function is first run
   if (isActive) {
     DateTime now = rtc.now(); 
     updateClockHour = now.hour();
     updateClockMinute = now.minute();
     isActive = false;
+    tft.fillScreen(TFT_BLACK);
   }
 
   updateClockHour += num;
@@ -217,26 +261,17 @@ void DisplaySetHour() {
     updateClockHour = 23;
   }
 
+  tft.setTextSize(2);
 
+  char timeStr[9];
+  sprintf(timeStr, "%2d:%02d", updateClockHour, updateClockMinute);   // Displays time as "9:05"
 
-  // set text size and color
-  // set cursor position
-  // print text
-
-  // tft.setTextSize(5);
-  // tft.setTextColor(TFT_GREEN, TFT_BLACK);   // Set text color to green and padding to back
-  // tft.setCursor(0, 15);
-
-  // tft.print("Set hour:");
-  // tft.setCursor(0,100);
-  // tft.print(updateClockHour);
-
-  delay(200);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Set clock hour", 0, 200);
+  tft.drawString(timeStr, 0, 250, 4);
 }
 
-void DisplaySetMinute() {
-  tft.fillScreen(TFT_BLACK);
-
+void SetClockMinute() {
   updateClockMinute += num;
   num = 0;
 
@@ -246,26 +281,22 @@ void DisplaySetMinute() {
     updateClockMinute = 59;
   }
 
-  char buffer[7];
-  itoa(updateClockMinute, buffer, 10);
+  tft.setTextSize(2);
 
-  tft.drawString("set clock minute", 0, 0, 2);
-  tft.drawString(buffer, 0, 100, 2);
+  char timeStr[9];
+  sprintf(timeStr, "%2d:%02d", updateClockHour, updateClockMinute);
 
-  // tft.setTextSize(5);
-  // tft.setTextColor(TFT_GREEN, TFT_BLACK);   // Set text color to green and padding to back
-  // tft.setCursor(0, 15);
-
-  // tft.print("Set minute:");
-  // tft.setCursor(0,100);
-  // tft.print(updateClockMinute);
-
-  delay(200);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Set clock minute", 0, 200);
+  tft.drawString(timeStr, 0, 250, 4);
 }
 
 
 void SetAlarmHour() {
-  tft.fillScreen(TFT_BLACK);
+  if (isActive) {
+    isActive = false;
+    tft.fillScreen(TFT_BLACK);
+  }
 
   alarmHour += num;
   num = 0;
@@ -276,18 +307,17 @@ void SetAlarmHour() {
     alarmHour = 23;
   }
 
-  tft.drawString("set alarm hour", 0, 0, 2);
+  tft.setTextSize(2);
 
-  // lcd.setCursor(0,0);
-  // lcd.print("Set alarm hour:");
-  // lcd.setCursor(0,1);
-  // lcd.print(alarmHour);
-  delay(200);
+  char timeStr[9];
+  sprintf(timeStr, "%2d:%02d", alarmHour, alarmMinute);
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Set alarm hour", 0, 200);
+  tft.drawString(timeStr, 0, 250, 4);
 }
 
 void SetAlarmMinute() {
-  tft.fillScreen(TFT_BLACK);
-
   alarmMinute += num;
   num = 0;
 
@@ -297,13 +327,12 @@ void SetAlarmMinute() {
     alarmMinute = 59;
   }
 
-  tft.drawString("set alarm minute", 0, 0, 2);
+  char timeStr[9];
+  sprintf(timeStr, "%2d:%02d", alarmHour, alarmMinute);
 
-  // lcd.setCursor(0,0);
-  // lcd.print("Set alarm minute:");
-  // lcd.setCursor(0,1);
-  // lcd.print(alarmMinute);
-  delay(200);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Set alarm minute", 0, 200);
+  tft.drawString(timeStr, 0, 250, 4);
 }
 
 
@@ -316,13 +345,12 @@ void DisplayClock(){
   sprintf(timeStr, "%2d:%02d:%02d", now.hour(), now.minute(), now.second());
 
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString(timeStr, 0, 0, 4);
+  tft.drawString(timeStr, 0, 200, 4);
 
-  // // Display if alarm is on or off
+  // Display if alarm is on or off
   if (isAlarmOn) {
-    tft.drawString("On", 100, 200, 4);
+    tft.drawString("On", 300, 200, 4);
   } else {
-    tft.drawString("Off", 100, 200, 4);
+    tft.drawString("Off", 300, 200, 4);
   }
-
 }
