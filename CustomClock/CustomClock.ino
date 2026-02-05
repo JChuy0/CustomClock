@@ -32,7 +32,7 @@ int clockSecond = 0;
 int alarmHour = 0;
 int alarmMinute = 0;
 int menu = 0;
-int num = 0;
+int encoderValue = 0;
 
 bool isActive = false;
 bool isAlarmOn = false;
@@ -92,7 +92,7 @@ void setup() {
   bme.setTemperatureOversampling(BME680_OS_8X);
   bme.setHumidityOversampling(BME680_OS_2X);
 
-  // testAlarm();
+  testAlarm();
 }
 
 
@@ -100,14 +100,14 @@ void testAlarm() {
   // year month day hour minute second
   rtc.adjust(DateTime(2025, 1, 1, 18, 44, 40));
 
-  alarmHour = 18;
+  alarmHour = 17;
   alarmMinute = 45;
 }
 
 
 void readButton() {
   unsigned long now = millis();
-  num = 0;
+  encoderValue = 0;
 
   // Debounce: filter out button noise, ensure code is only run once per press
   if (now - lastPulse >= 1000) {
@@ -133,9 +133,9 @@ void readEncoder() {
 
     // Check rotation direction based on DT pin state
     if (digitalRead(ENCODER_DT)) {
-      num++;
+      encoderValue++;
     } else {
-      num--;
+      encoderValue--;
     }
   }
 }
@@ -147,20 +147,22 @@ void loop() {
     DisplayClock();
     CheckAlarm();
 
-    // Get new data every 10 minutes
-    if(now - lastBMEReading >= 1000) {
+    // Get a new reading from BME680 every X minutes
+    if(now - lastBMEReading >= 5000) {
       lastBMEReading = now;
       ReadBME680();
     }
 
   } else if (menu == 1) {
-    SetClockHour();
+    GetCurrentTime();
+    SetTime(updateClockHour, 23, "Set Clock Hour", updateClockMinute);
   } else if (menu == 2) {
-    SetClockMinute();
+    SetTime(updateClockMinute, 59, "Set Clock Minute", updateClockHour);
   } else if (menu == 3) {
-    SetAlarmHour();
+    ClearScreen();
+    SetTime(alarmHour, 23, "Set Alarm Hour", alarmMinute);
   } else if (menu == 4) {
-    SetAlarmMinute();
+    SetTime(alarmMinute, 59, "Set Alarm Minute", alarmHour);
   } else if (menu == 5) {
     TurnAlarmOnOff();
   } else {
@@ -170,6 +172,55 @@ void loop() {
 
 }
 
+
+void GetCurrentTime() {
+  if (isActive) {
+    DateTime now = rtc.now(); 
+    updateClockHour = now.hour();
+    updateClockMinute = now.minute();
+    isActive = false;
+    tft.fillScreen(TFT_BLACK);
+  }
+}
+
+void ClearScreen() {
+  if (isActive) {
+    isActive = false;
+    tft.fillScreen(TFT_BLACK);
+  }
+}
+
+// A generic function to set any time value (hours or minutes)
+// editingValue: The value being adjusted (hour or minute).
+// maxValue: Upper limit. 23 for hour, 59 for minute.
+// label: Screen label (e.g. "Set alarm hour").
+// displayValue: The paired time value shown for context .
+void SetTime(int &editingValue, int maxValue, const char* label, int displayValue) {
+  editingValue += encoderValue;
+  encoderValue = 0;
+
+  if (editingValue < 0) {
+    editingValue = maxValue;
+  } else if (editingValue > maxValue) {
+    editingValue = 0;
+  }
+
+  tft.setTextSize(2);
+  char timeStr[9];
+
+  if (maxValue == 23) {
+    sprintf(timeStr, "%02d:%02d", editingValue, displayValue);
+  } else if (maxValue == 59) {
+    sprintf(timeStr, "%02d:%02d", displayValue, editingValue);
+  }
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString(label, 0, 200);
+  tft.drawString(timeStr, 0, 250, 4);
+}
+
+
+// Reads the temperature and humidity from a BME680 sensor
 void ReadBME680() {
   char temperature[20];
   char humidity[20];
@@ -198,9 +249,11 @@ void UpdateRTC() {
   tft.fillScreen(TFT_BLACK);
 }
 
+
 void CheckAlarm() {
   DateTime now = rtc.now();
 
+  // I coded things this way so the alarm will continue to ring until it is turned off.
   if (isAlarmOn && (now.hour() == alarmHour) && (now.minute() == alarmMinute) && (now.second() == 0) ) {
     isAlarmRinging = true;
   }
@@ -208,7 +261,6 @@ void CheckAlarm() {
   if (isAlarmRinging) {
     AlarmBuzzer();
   }
-
 }
 
 void AlarmBuzzer() {
@@ -227,9 +279,9 @@ void AlarmBuzzer() {
 
 
 void TurnAlarmOnOff() {
-  if (num != 0) {
+  if (encoderValue != 0) {
     isAlarmOn = !isAlarmOn;
-    num = 0;
+    encoderValue = 0;
   }
 
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -241,100 +293,6 @@ void TurnAlarmOnOff() {
     tft.drawString("Off", 0, 100, 2);
   }
 }
-
-void SetClockHour() {
-  // This ensures the current time is displayed when the function is first run
-  if (isActive) {
-    DateTime now = rtc.now(); 
-    updateClockHour = now.hour();
-    updateClockMinute = now.minute();
-    isActive = false;
-    tft.fillScreen(TFT_BLACK);
-  }
-
-  updateClockHour += num;
-  num = 0;
-
-  if (updateClockHour > 23) {
-    updateClockHour = 0;
-  } else if (updateClockHour < 0) {
-    updateClockHour = 23;
-  }
-
-  tft.setTextSize(2);
-
-  char timeStr[9];
-  sprintf(timeStr, "%2d:%02d", updateClockHour, updateClockMinute);   // Displays time as "9:05"
-
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString("Set clock hour", 0, 200);
-  tft.drawString(timeStr, 0, 250, 4);
-}
-
-void SetClockMinute() {
-  updateClockMinute += num;
-  num = 0;
-
-  if (updateClockMinute > 59) {
-    updateClockMinute = 0;
-  } else if (updateClockMinute < 0) {
-    updateClockMinute = 59;
-  }
-
-  tft.setTextSize(2);
-
-  char timeStr[9];
-  sprintf(timeStr, "%2d:%02d", updateClockHour, updateClockMinute);
-
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString("Set clock minute", 0, 200);
-  tft.drawString(timeStr, 0, 250, 4);
-}
-
-
-void SetAlarmHour() {
-  if (isActive) {
-    isActive = false;
-    tft.fillScreen(TFT_BLACK);
-  }
-
-  alarmHour += num;
-  num = 0;
-
-  if (alarmHour > 23) {
-    alarmHour = 0;
-  } else if (alarmHour < 0) {
-    alarmHour = 23;
-  }
-
-  tft.setTextSize(2);
-
-  char timeStr[9];
-  sprintf(timeStr, "%2d:%02d", alarmHour, alarmMinute);
-
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString("Set alarm hour", 0, 200);
-  tft.drawString(timeStr, 0, 250, 4);
-}
-
-void SetAlarmMinute() {
-  alarmMinute += num;
-  num = 0;
-
-  if (alarmMinute > 59) {
-    alarmMinute = 0;
-  } else if (alarmMinute < 0) {
-    alarmMinute = 59;
-  }
-
-  char timeStr[9];
-  sprintf(timeStr, "%2d:%02d", alarmHour, alarmMinute);
-
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString("Set alarm minute", 0, 200);
-  tft.drawString(timeStr, 0, 250, 4);
-}
-
 
 void DisplayClock(){
   DateTime now = rtc.now();
