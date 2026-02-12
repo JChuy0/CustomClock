@@ -23,28 +23,40 @@ TFT_eSPI tft = TFT_eSPI();
 #define ENCODER_BTN 27
 
 
-
-
-
 // Variables
 
 int menu = 0;
 int encoderValue = 0;
 
-bool isActive = false;
+bool editModeInitialized = true;
 volatile uint64_t lastPulse;
 volatile uint64_t lastBMEReading;
 
 
-int updateClockHour = 0;
-int updateClockMinute = 0;
-int clockSecond = 0;
-int alarmHour = 0;
-int alarmMinute = 0;
+// int updateClockHour = 0;
+// int updateClockMinute = 0;
+// int clockSecond = 0;
+// int alarmHour = 0;
+// int alarmMinute = 0;
 
-
-#include "ClockAndAlarm.h"
 #include "AirSensor.h"
+#include "Clock.h"
+#include "Alarm.h"
+
+BME680Data airData;
+
+
+
+
+struct timeData {
+  int clockHour;
+  int clockMinute;
+  int alarmHour;
+  int alarmMinute;
+};
+
+timeData currTime;
+
 
 void setup() {
   Serial.begin(9600);
@@ -78,7 +90,7 @@ void readButton() {
   if (now - lastPulse >= 1000) {
     lastPulse = now;
     menu++;
-    isActive = true;
+    editModeInitialized = false;
   }
 
   // Turns alarm off when button is pressed
@@ -109,25 +121,29 @@ void loop() {
   unsigned long now = millis();
 
   if (menu == 0) {
-    displayClock();
+    // displayClock();
     checkAlarm();
 
     // Get a new reading from BME680 every X minutes
     if(now - lastBMEReading >= 5000) {
       lastBMEReading = now;
-      readBME680();
+      airData = readBME680();
     }
 
   } else if (menu == 1) {
+    currTime.clockHour = setClockHour();
     // getCurrentTime();
-    setTime(updateClockHour, 23, "Set Clock Hour", updateClockMinute);
+    // setTime(updateClockHour, 23, "Set Clock Hour", updateClockMinute);
   } else if (menu == 2) {
-    setTime(updateClockMinute, 59, "Set Clock Minute", updateClockHour);
+    currTime.clockMinute = setClockMinute();
+    // setTime(updateClockMinute, 59, "Set Clock Minute", updateClockHour);
   } else if (menu == 3) {
-    clearScreen();
-    setTime(alarmHour, 23, "Set Alarm Hour", alarmMinute);
+    // timeTest.alarmHour = setAlarmHour();
+    // clearScreen();
+    // setTime(alarmHour, 23, "Set Alarm Hour", alarmMinute);
   } else if (menu == 4) {
-    setTime(alarmMinute, 59, "Set Alarm Minute", alarmHour);
+    // timeTest.alarmMinute = setAlarmMinute();
+    // setTime(alarmMinute, 59, "Set Alarm Minute", alarmHour);
   } else if (menu == 5) {
     turnAlarmOnOff();
   } else {
@@ -135,12 +151,37 @@ void loop() {
     menu = 0;
   }
 
+  testDisplay();
+}
+
+void testDisplay() {
+  char temperature[20];
+  char humidity[20];
+
+  sprintf(temperature, "%.1f C", airData.temperature);
+  sprintf(humidity, "%.1f %", airData.humidity);
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Temperature:", 0, 0);
+  tft.drawString(temperature, 25, 20, 2);
+
+  tft.drawString("Humidity:", 180, 0);
+  tft.drawString(humidity, 195, 20, 2);
+
+  tft.setTextSize(2);
+  char timeStr[9];
+
+  sprintf(timeStr, "%02d:%02d", currTime.clockHour, currTime.clockMinute);
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Set time", 0, 200);
+  tft.drawString(timeStr, 0, 250, 4);
 }
 
 
-void clearScreen() {
-  if (isActive) {
-    isActive = false;
-    tft.fillScreen(TFT_BLACK);
-  }
-}
+// void clearScreen() {
+//   if (isActive) {
+//     isActive = false;
+//     tft.fillScreen(TFT_BLACK);
+//   }
+// }

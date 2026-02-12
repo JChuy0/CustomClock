@@ -17,24 +17,19 @@ void setupBME680() {
 }
 
 // Reads the temperature and humidity from a BME680 sensor
-void readBME680() {
-  char temperature[20];
-  char humidity[20];
+BME680Data readBME680() {
+
+  BME680Data data;
   unsigned long endTime = bme.beginReading();
 
   // Get measurement results from BME680.
     if (!bme.endReading()) {
     Serial.println(F("Failed to complete reading :("));
-    return;
+    return data;
   }
 
-  sprintf(temperature, "%.1f C", bme.temperature);
-  sprintf(humidity, "%.1f %", bme.humidity);
+  data.temperature = bme.temperature;
+  data.humidity = bme.humidity;
 
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString("Temperature:", 0, 0);
-  tft.drawString(temperature, 25, 20, 2);
-
-  tft.drawString("Humidity:", 180, 0);
-  tft.drawString(humidity, 195, 20, 2);
+  return data;
 }

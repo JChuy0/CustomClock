@@ -4,7 +4,14 @@
 #include "TFT_eSPI.h"
 extern TFT_eSPI tft;
 
+struct BME680Data {
+  float temperature;
+  float humidity;
+  // float pressure; 
+  // float gasResistance;
+};
+
 void setupBME680();
-void readBME680();
+BME680Data readBME680();
 
 #endif
