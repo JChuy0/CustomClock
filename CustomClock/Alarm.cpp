@@ -29,7 +29,7 @@ int melody[] = {
 //   alarmMinute = 45;
 // }
 
-int SetAlarmHour() {
+int setAlarmHour() {
   updateAlarmHour += encoderValue;
   encoderValue = 0;
 
@@ -42,7 +42,7 @@ int SetAlarmHour() {
   return updateAlarmHour;
 }
 
-int SetAlarmMinute() {
+int setAlarmMinute() {
   updateAlarmMinute += encoderValue;
   encoderValue = 0;
 
@@ -54,7 +54,6 @@ int SetAlarmMinute() {
 
   return updateAlarmMinute;
 }
-
 
 void checkAlarm() {
   DateTime now = rtc.now();
@@ -83,19 +82,12 @@ void alarmBuzzer() {
   }
 }
 
-
-void turnAlarmOnOff() {
+bool turnAlarmOnOff() {
   if (encoderValue != 0) {
     isAlarmOn = !isAlarmOn;
     encoderValue = 0;
   }
 
-  // tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  // tft.drawString("Alarm is:", 0, 0, 2);
-
-  // if (isAlarmOn) {
-  //   tft.drawString("On", 0, 100, 2);
-  // } else {
-  //   tft.drawString("Off", 0, 100, 2);
-  // }
+  return isAlarmOn;
 }
+

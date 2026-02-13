@@ -1,5 +1,5 @@
 #include "Clock.h"
-#include "RTClib.h"
+
 RTC_DS1307 rtc;
 
 // TIME DATE VARIABLES
@@ -21,49 +21,22 @@ void setupRTC() {
     // Sets time to January 1st, 2025
     rtc.adjust(DateTime(2025, 1, 1, 1, 0, 0));
   }
-
-  // isAlarmOn = true;
 }
 
-void getCurrentTime() {
+DateTime getCurrentTime() {
   DateTime now = rtc.now(); 
   updateClockHour = now.hour();
   updateClockMinute = now.minute();
-  tft.fillScreen(TFT_BLACK);
+  // tft.fillScreen(TFT_BLACK);
+
+  return now;
 }
 
-
-/*
-set time (string "hour/minute")
-
-run getCurrentTime();
-  this puts the current time into hour/minute variables
-
-  if (string == hour) {
-    updateClockHour += encoderValue;
-    maxValue = 23;
-  } else if (string == minute) {
-    updateClockMinute += encoderValue;
-    maxValue = 59;
-  }
-
-  encoderValue = 0;
-
-  if (value < 0) {
-    value = maxValue;
-  } else if (value > maxValue) {
-    value = 0;
-  }
-
-
-*/
-
-
 int setClockHour() {
-  if(!editModeInitialized) {
-    getCurrentTime();
-    editModeInitialized = true;
-  }
+  // if(!editModeEnabled) {
+  //   getCurrentTime();
+  //   editModeEnabled = true;
+  // }
 
   updateClockHour += encoderValue;
   encoderValue = 0;
@@ -90,60 +63,8 @@ int setClockMinute() {
   return updateClockMinute;
 }
 
-
-// A generic function to set any time value (hours or minutes)
-// value: The value being adjusted (hour or minute).
-// maxValue: Upper limit. 23 for hour, 59 for minute.
-// label: Screen label (e.g. "Set alarm hour").
-// otherValue: The paired time value shown for context .
-// void setTime(int &value, int maxValue, const char* label, int otherValue) {
-//   value += encoderValue;
-//   encoderValue = 0;
-
-//   if (value < 0) {
-//     value = maxValue;
-//   } else if (value > maxValue) {
-//     value = 0;
-//   }
-
-//   tft.setTextSize(2);
-//   char timeStr[9];
-
-//   if (maxValue == 23) {
-//     sprintf(timeStr, "%02d:%02d", value, otherValue);
-//   } else if (maxValue == 59) {
-//     sprintf(timeStr, "%02d:%02d", otherValue, value);
-//   }
-
-//   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-//   tft.drawString(label, 0, 200);
-//   tft.drawString(timeStr, 0, 250, 4);
-// }
-
-
 // Updates the time on the clock module
 void updateRTC() {
   rtc.adjust(DateTime(updateYear, updateMonth, updateDay, updateClockHour, updateClockMinute, clockSecond));
   tft.fillScreen(TFT_BLACK);
 }
-
-
-// void displayClock(){
-//   DateTime now = rtc.now();
-
-//   tft.setTextSize(2);
-
-//   char timeStr[9];
-//   sprintf(timeStr, "%2d:%02d:%02d", now.hour(), now.minute(), now.second());
-
-//   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-//   tft.drawString(timeStr, 0, 200, 4);
-
-//   // Display if alarm is on or off
-//   if (isAlarmOn) {
-//     tft.drawString("On", 300, 200, 4);
-//   } else {
-//     tft.drawString("Off", 300, 200, 4);
-//   }
-// }
-
