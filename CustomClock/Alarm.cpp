@@ -5,7 +5,7 @@ int updateAlarmHour = 0;
 int updateAlarmMinute = 0;
 
 bool isAlarmOn = false;
-bool isAlarmRinging = false;
+// bool isAlarmRinging = false;
 
 
 // Set up the notes and melody
@@ -21,13 +21,17 @@ int melody[] = {
 };
 
 
-// void testAlarm() {
-//   // year month day hour minute second
-//   rtc.adjust(DateTime(2025, 1, 1, 18, 44, 40));
+void testAlarm() {
+  // year month day hour minute second
+  rtc.adjust(DateTime(2025, 1, 1, 18, 44, 40));
 
-//   alarmHour = 17;
-//   alarmMinute = 45;
-// }
+  updateAlarmHour = 18;
+  updateAlarmMinute = 45;
+
+  isAlarmOn = true;
+}
+
+
 
 int setAlarmHour() {
   updateAlarmHour += encoderValue;
@@ -55,10 +59,11 @@ int setAlarmMinute() {
   return updateAlarmMinute;
 }
 
+// Checks if it's time for the alarm to go off
 void checkAlarm() {
   DateTime now = rtc.now();
 
-  // I coded things this way so the alarm will continue to ring until it is turned off.
+  // The alarm will continue to ring until it is turned off
   if (isAlarmOn && (now.hour() == updateAlarmHour) && (now.minute() == updateAlarmMinute) && (now.second() == 0) ) {
     isAlarmRinging = true;
   }

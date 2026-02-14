@@ -27,17 +27,11 @@ DateTime getCurrentTime() {
   DateTime now = rtc.now(); 
   updateClockHour = now.hour();
   updateClockMinute = now.minute();
-  // tft.fillScreen(TFT_BLACK);
 
   return now;
 }
 
 int setClockHour() {
-  // if(!editModeEnabled) {
-  //   getCurrentTime();
-  //   editModeEnabled = true;
-  // }
-
   updateClockHour += encoderValue;
   encoderValue = 0;
 
