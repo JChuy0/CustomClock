@@ -60,5 +60,5 @@ int setClockMinute() {
 // Updates the time on the clock module
 void updateRTC() {
   rtc.adjust(DateTime(updateYear, updateMonth, updateDay, updateClockHour, updateClockMinute, clockSecond));
-  tft.fillScreen(TFT_BLACK);
+  // tft.fillScreen(TFT_BLACK);
 }

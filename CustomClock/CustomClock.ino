@@ -10,13 +10,15 @@
 */
 
 // Libraries
-#include "Wire.h"
-#include "SPI.h"
-#include "TFT_eSPI.h"
+#include "Wire.h" // Enables I2C communication
+#include "SPI.h"  // Enables SPI communication
+#include "Data_Types.h"
+// #include "TFT_eSPI.h"
+#include "Display.h"
 
 
 // Initialize the pins
-TFT_eSPI tft = TFT_eSPI();
+// TFT_eSPI tft = TFT_eSPI();
 
 #define ENCODER_CLK 25
 #define ENCODER_DT 26
@@ -24,10 +26,9 @@ TFT_eSPI tft = TFT_eSPI();
 
 
 // Variables
-
 int menu = 0;
 int encoderValue = 0;
-bool alarmOnValue = true;
+bool alarmOnOffValue = true;
 bool isAlarmRinging = false;
 
 volatile uint64_t lastPulse;
@@ -38,27 +39,16 @@ volatile uint64_t lastBMEReading;
 #include "Alarm.h"
 
 BME680Data airData;
-
-struct timeData {
-  int hour = 0;
-  int minute = 0;
-  int second = 0;
-  // bool isAlarmOn = false;
-};
-
 timeData clockTime;
 timeData alarmTime;
-
-void displayTimeEditor(timeData &time, const char* label = "");
-void displayAlarmOnOff(const char* label = "");
 
 
 void setup() {
   Serial.begin(9600);
-  while(!Serial);   // add a brief pause so the serial monitor can start up
+  delay(3000);   // add a brief pause so the serial monitor can start up
 
-  tft.init();
   Wire.begin(21, 22);
+  setup_TFT_Screen();
 
   pinMode(ENCODER_CLK, INPUT);
   pinMode(ENCODER_DT, INPUT);
@@ -66,14 +56,11 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENCODER_CLK), readEncoder, FALLING);
   attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), readButton, FALLING);
 
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_GREEN, TFT_BLACK);
-  tft.setRotation(3);
 
   setupRTC();
   setupBME680();
 
-  testAlarm();
+  // testAlarm();
 }
 
 
@@ -115,18 +102,22 @@ void readEncoder() {
 
 
 void loop() {
+  handleMenu();
+}
+
+void handleMenu() {
   unsigned long now = millis();
 
   switch(menu) {
-    case 0: 
-      displayClock(getCurrentTime());
-      checkAlarm();
-
+    case 0:
       // Get a new reading from BME680 every X minutes
-      if(now - lastBMEReading >= 5000) {
+      if(now - lastBMEReading >= 5000) {    // currently get update every 5 seconds          <===  CHANGE THIS WHEN DONE TESTING
         lastBMEReading = now;
         airData = readBME680();
       }
+
+      displayClock(getCurrentTime(), airData, alarmOnOffValue);
+      checkAlarm();
       break;
     case 1: 
       clockTime.hour = setClockHour();
@@ -145,66 +136,12 @@ void loop() {
       displayTimeEditor(alarmTime, "Set Alarm Minute");
       break;
     case 5: 
-      alarmOnValue = turnAlarmOnOff();
-      displayAlarmOnOff("Alarm is: ");  // This will display a label while in edit mode, but not in display mode
+      alarmOnOffValue = turnAlarmOnOff();
+      displayAlarmOnOff(alarmOnOffValue, "Alarm is: ");  // This will display a label while in edit mode, but not in display mode
       break;
     default: 
       updateRTC();
-      tft.fillScreen(TFT_BLACK);
+      resetScreen();
       menu = 0;
-  }
-
-}
-
-void displayClock(DateTime currTime) {
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-
-  // Air Sensor Data
-  char temperature[20];
-  char humidity[20];
-
-  sprintf(temperature, "%.1f C", airData.temperature);
-  sprintf(humidity, "%.1f %", airData.humidity);
-
-  // Temperature
-  tft.drawString("Temperature:", 0, 0);
-  tft.drawString(temperature, 25, 20, 2);
-
-  // Humidity
-  tft.drawString("Humidity:", 180, 0);
-  tft.drawString(humidity, 195, 20, 2);
-
-  // Clock
-  char timeStr[10];
-  sprintf(timeStr, "%02d:%02d:%02d", currTime.hour(), currTime.minute(), currTime.second());
-
-  tft.setTextSize(2);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString(timeStr, 0, 250, 4);
-
-  // Alarm
-  displayAlarmOnOff();
-}
-
-void displayTimeEditor(timeData &time, const char* label) {
-
-  // Time
-  char timeStr[9];
-  sprintf(timeStr, "%02d:%02d", time.hour, time.minute);
-
-  tft.setTextSize(2);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString(label, 0, 200);
-  tft.drawString(timeStr, 0, 250, 4);
-}
-
-void displayAlarmOnOff(const char* label) {
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString(label, 250, 200, 2);
-
-  if (alarmOnValue) {
-    tft.drawString("On  ", 250, 250, 2);
-  } else {
-    tft.drawString("Off", 250, 250, 2);
   }
 }
