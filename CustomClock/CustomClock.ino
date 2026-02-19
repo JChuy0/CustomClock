@@ -13,13 +13,9 @@
 #include "Wire.h" // Enables I2C communication
 #include "SPI.h"  // Enables SPI communication
 #include "Data_Types.h"
-// #include "TFT_eSPI.h"
 #include "Display.h"
 
-
 // Initialize the pins
-// TFT_eSPI tft = TFT_eSPI();
-
 #define ENCODER_CLK 25
 #define ENCODER_DT 26
 #define ENCODER_BTN 27
@@ -48,17 +44,15 @@ void setup() {
   delay(3000);   // add a brief pause so the serial monitor can start up
 
   Wire.begin(21, 22);
-  setup_TFT_Screen();
+  setupScreen();
+  setupRTC();
+  setupBME680();
 
   pinMode(ENCODER_CLK, INPUT);
   pinMode(ENCODER_DT, INPUT);
   pinMode(ENCODER_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(ENCODER_CLK), readEncoder, FALLING);
   attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), readButton, FALLING);
-
-
-  setupRTC();
-  setupBME680();
 
   // testAlarm();
 }
@@ -118,6 +112,7 @@ void handleMenu() {
 
       displayClock(getCurrentTime(), airData, alarmOnOffValue);
       checkAlarm();
+      displayImage();
       break;
     case 1: 
       clockTime.hour = setClockHour();
