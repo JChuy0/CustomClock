@@ -5,6 +5,10 @@
 
 TFT_eSPI tft = TFT_eSPI();
 
+
+// FOR DISPLAYING IMAGES
+String imageFiles[15];
+int imageCount = 0;
 int16_t image_xpos = 350;
 int16_t image_ypos = 180;
 
@@ -33,8 +37,6 @@ void resetScreen() {
 }
 
 void displayClock(DateTime currTime, BME680Data airData, bool alarmOnOffValue) {
-  Serial.println("Entered displayClock.");
-
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // Air Sensor Data
@@ -121,38 +123,38 @@ int pngDraw(PNGDRAW *pDraw) {
 }
 
 
-void displayImage()
-{
-  String filePath ="clock/";
+// Load all images for a given folder
+void loadAnimation(const char* filePath) {
+  imageCount = 0;
 
   // Scan LittleFS and load any *.png files
-  File root = LittleFS.open("/" + filePath, "r");
+  File root = LittleFS.open(filePath, "r");
 
+  // Loads the filepath for each image into the array
   while (File file = root.openNextFile()) {
     String strname = file.name();
-    strname = "/" + filePath + strname;
+    strname = filePath + strname;
 
     // If it is not a directory and filename ends in .png then load it
     if (!file.isDirectory() && strname.endsWith(".png")) {
-      // Pass support callback function names to library
-      int16_t rc = png.open(strname.c_str(), pngOpen, pngClose, pngRead, pngSeek, pngDraw);
-
-      if (rc == PNG_SUCCESS) {
-        tft.startWrite();
-        // Serial.printf("image specs: (%d x %d), %d bpp, pixel type: %d\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType());
-        uint32_t dt = millis();
-
-        if (png.getWidth() > MAX_IMAGE_WIDTH) {
-          Serial.println("Image too wide for allocated line buffer size!");
-        } else {
-          rc = png.decode(NULL, 0);
-          png.close();
-        }
-
-        tft.endWrite();
-      }
+      imageFiles[imageCount] = strname;
+      imageCount++;
     }
+  }
 
-    delay(150);
+  imageCount = 0;
+}
+
+void displayImage() {
+  int16_t rc = png.open(imageFiles[imageCount].c_str(), pngOpen, pngClose, pngRead, pngSeek, pngDraw);
+  imageCount++;
+
+  if (rc == PNG_SUCCESS) {
+    tft.startWrite();
+    rc = png.decode(NULL, 0);
+    png.close();
+    tft.endWrite();
+  } else {
+    imageCount = 0;
   }
 }

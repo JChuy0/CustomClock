@@ -14,6 +14,7 @@ void displayClock(DateTime currTime, BME680Data airData, bool alarmOnOffValue);
 void displayTimeEditor(timeData &time, const char* label);
 void displayAlarmOnOff(bool alarmOnOff, const char* label);
 
+void loadAnimation(const char* label);
 void displayImage();
 
 #endif

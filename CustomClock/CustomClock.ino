@@ -29,6 +29,7 @@ bool isAlarmRinging = false;
 
 volatile uint64_t lastPulse;
 volatile uint64_t lastBMEReading;
+volatile uint64_t lastImageUpdate;
 
 #include "AirSensor.h"
 #include "Clock.h"
@@ -55,6 +56,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), readButton, FALLING);
 
   // testAlarm();
+  loadAnimation("/clock/");
 }
 
 
@@ -99,6 +101,8 @@ void loop() {
   handleMenu();
 }
 
+
+
 void handleMenu() {
   unsigned long now = millis();
 
@@ -110,9 +114,13 @@ void handleMenu() {
         airData = readBME680();
       }
 
+      if (now -lastImageUpdate >= 100) {
+        lastImageUpdate = now;
+        displayImage();
+      }
+
       displayClock(getCurrentTime(), airData, alarmOnOffValue);
       checkAlarm();
-      displayImage();
       break;
     case 1: 
       clockTime.hour = setClockHour();
