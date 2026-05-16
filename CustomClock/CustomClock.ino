@@ -10,6 +10,7 @@
 */
 
 // Libraries
+#include <Arduino.h>
 #include "Wire.h" // Enables I2C communication
 #include "SPI.h"  // Enables SPI communication
 #include "Data_Types.h"
@@ -31,6 +32,7 @@ volatile uint64_t lastPulse;
 volatile uint64_t lastBMEReading;
 volatile uint64_t lastImageUpdate;
 
+#include "SDCard.h"
 #include "AirSensor.h"
 #include "Clock.h"
 #include "Alarm.h"
@@ -45,6 +47,7 @@ void setup() {
   delay(3000);   // add a brief pause so the serial monitor can start up
 
   Wire.begin(21, 22);
+  setupSDCard();
   setupScreen();
   setupRTC();
   setupBME680();

@@ -28,6 +28,12 @@ BME680Data readBME680() {
     return data;
   }
 
+  // Serial.print("Temp: ");
+  // Serial.println(bme.temperature);
+  // Serial.print("Humidity: ");
+  // Serial.println(bme.humidity);
+  // Serial.println();
+
   data.temperature = bme.temperature;
   data.humidity = bme.humidity;
 

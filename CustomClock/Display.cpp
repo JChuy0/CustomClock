@@ -1,6 +1,6 @@
 #include "Display.h"
 
-#define FileSys LittleFS
+// #define FileSys LittleFS
 #define MAX_IMAGE_WIDTH 240
 
 TFT_eSPI tft = TFT_eSPI();
@@ -12,7 +12,7 @@ int imageCount = 0;
 int16_t image_xpos = 350;
 int16_t image_ypos = 180;
 
-File pngfile;
+File myFile;
 PNG png;
 
 void displayTimeEditor(timeData &time, const char* label = "");
@@ -25,11 +25,6 @@ void setupScreen() {
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
   tft.setRotation(3);
-
-  if (!FileSys.begin()) {
-    Serial.println("LittleFS initialisation failed!");
-    while (1) yield(); // Stay here twiddling thumbs waiting
-  }
 }
 
 void resetScreen() {
@@ -90,31 +85,29 @@ void displayAlarmOnOff(bool alarmOnOff, const char* label) {
 }
 
 
-void * pngOpen(const char *filename, int32_t *size) {
-  Serial.printf("Attempting to open %s\n", filename);
-  pngfile = FileSys.open(filename, "r");
-  *size = pngfile.size();
-  return &pngfile;
+void * myOpen(const char *fileName, int32_t *size) {
+  Serial.printf("Attempting to open %s\n", fileName);
+  myFile = SD.open(fileName);
+  *size = myFile.size();
+  return &myFile;
 }
 
-void pngClose(void *handle) {
-  File pngfile = *((File*)handle);
-  if (pngfile) pngfile.close();
+void myClose(void *handle) {
+  if (myFile) myFile.close();
 }
 
-int32_t pngRead(PNGFILE *page, uint8_t *buffer, int32_t length) {
-  if (!pngfile) return 0;
-  page = page; // Avoid warning
-  return pngfile.read(buffer, length);
+int32_t myRead(PNGFILE *handle, uint8_t *buffer, int32_t length) {
+  if (!myFile) return 0;
+  return myFile.read(buffer, length);
 }
 
-int32_t pngSeek(PNGFILE *page, int32_t position) {
-  if (!pngfile) return 0;
-  page = page; // Avoid warning
-  return pngfile.seek(position);
+int32_t mySeek(PNGFILE *handle, int32_t position) {
+  if (!myFile) return 0;
+  return myFile.seek(position);
 }
 
-int pngDraw(PNGDRAW *pDraw) {
+// Function to draw pixels to the display
+int PNGDraw(PNGDRAW *pDraw) {
   uint16_t lineBuffer[MAX_IMAGE_WIDTH];
   png.getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
   tft.pushImage(image_xpos, image_ypos + pDraw->y, pDraw->iWidth, 1, lineBuffer);
@@ -122,22 +115,20 @@ int pngDraw(PNGDRAW *pDraw) {
   return 1;
 }
 
-
 // Load all images for a given folder
 void loadAnimation(const char* filePath) {
   imageCount = 0;
 
-  // Scan LittleFS and load any *.png files
-  File root = LittleFS.open(filePath, "r");
+  // Scan SD card and load any *.png files
+  File root = SD.open(filePath);
 
   // Loads the filepath for each image into the array
   while (File file = root.openNextFile()) {
-    String strname = file.name();
-    strname = filePath + strname;
+    String strName = file.path();
 
     // If it is not a directory and filename ends in .png then load it
-    if (!file.isDirectory() && strname.endsWith(".png")) {
-      imageFiles[imageCount] = strname;
+    if (!file.isDirectory() && strName.endsWith(".png")) {
+      imageFiles[imageCount] = strName;
       imageCount++;
     }
   }
@@ -146,14 +137,12 @@ void loadAnimation(const char* filePath) {
 }
 
 void displayImage() {
-  int16_t rc = png.open(imageFiles[imageCount].c_str(), pngOpen, pngClose, pngRead, pngSeek, pngDraw);
+  int16_t rc = png.open(imageFiles[imageCount].c_str(), myOpen, myClose, myRead, mySeek, PNGDraw);
   imageCount++;
 
   if (rc == PNG_SUCCESS) {
-    tft.startWrite();
     rc = png.decode(NULL, 0);
     png.close();
-    tft.endWrite();
   } else {
     imageCount = 0;
   }
