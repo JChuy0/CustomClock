@@ -17,9 +17,9 @@
 #include "Display.h"
 
 // Initialize the pins
-#define ENCODER_CLK 25
-#define ENCODER_DT 26
-#define ENCODER_BTN 27
+#define ENCODER_CLK 26
+#define ENCODER_DT 27
+#define ENCODER_BTN 14
 
 
 // Variables
@@ -89,6 +89,7 @@ void readEncoder() {
   // Debounce: filter out encoder noise, ensure code is only run once per twist
   if(now - lastPulse >= 500) {
     lastPulse = now;
+
 
     // Check rotation direction based on DT pin state
     if (digitalRead(ENCODER_DT)) {

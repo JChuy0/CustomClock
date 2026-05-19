@@ -86,7 +86,7 @@ void displayAlarmOnOff(bool alarmOnOff, const char* label) {
 
 
 void * myOpen(const char *fileName, int32_t *size) {
-  Serial.printf("Attempting to open %s\n", fileName);
+  // Serial.printf("Attempting to open %s\n", fileName);
   myFile = SD.open(fileName);
   *size = myFile.size();
   return &myFile;
