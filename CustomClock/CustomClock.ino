@@ -51,6 +51,7 @@ void setup() {
   setupScreen();
   setupRTC();
   setupBME680();
+  alarmSetup();
 
   pinMode(ENCODER_CLK, INPUT);
   pinMode(ENCODER_DT, INPUT);
@@ -58,7 +59,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENCODER_CLK), readEncoder, FALLING);
   attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), readButton, FALLING);
 
-  // testAlarm();
+  testAlarm();
   loadAnimation("/clock/");
 }
 

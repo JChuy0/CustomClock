@@ -7,17 +7,10 @@ bool isAlarmOn = false;
 // bool isAlarmRinging = false;
 
 
-// Set up the notes and melody
-#define NOTE_C4  262
-#define NOTE_G3  196
+AudioGeneratorMP3 *mp3;
+AudioFileSourceSD *file;
+AudioOutputI2S *out;
 
-int noteDurations[] = {
-  4, 8, 4, 8, 4, 8, 4, 8
-};
-
-int melody[] = {
-  NOTE_C4, NOTE_G3, NOTE_C4, NOTE_G3, NOTE_C4, NOTE_G3, NOTE_C4, NOTE_G3
-};
 
 
 void testAlarm() {
@@ -28,6 +21,15 @@ void testAlarm() {
   updateAlarmMinute = 45;
 
   isAlarmOn = true;
+}
+
+
+void alarmSetup() {
+  file = new AudioFileSourceSD("/alarm.mp3");
+  out = new AudioOutputI2S();
+  out->SetPinout(33, 25, 32);  // BCLK, LRC, DOUT
+  mp3 = new AudioGeneratorMP3();
+  mp3->begin(file, out);
 }
 
 
@@ -73,16 +75,8 @@ void checkAlarm() {
 }
 
 void alarmBuzzer() {
-  for (int thisNote = 0; thisNote < 8; thisNote++) {
-    int noteDuration = 1000 / noteDurations[thisNote];
-
-    // pin number, sound to play, duration
-    tone(33, melody[thisNote], noteDuration);
-
-    int pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
-    // stop the tone playing:
-    noTone(33);
+  if (mp3->isRunning()) {
+    if (!mp3->loop()) mp3->stop();
   }
 }
 
