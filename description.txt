@@ -1,0 +1,22 @@
+NOTE: This project is still a work in progress.
+
+<b>Overview</b>
+I wanted to build something using an ESP32 I had lying around. As I was looking around the house for ideas, I remembered my alarm clock is over 20 years old. So, I thought I'd build a new one that I could customize both inside and out.
+
+Besides displaying the time/alarm, I wanted to include a few more bells and whistles, such as reading the air quality in my room, playing a short animation, and play an MP3 when the alarm goes off. Check the GitHub link below for a list of parts used.
+
+<b><u>Problems and Solutions</u></b>
+<b>Animation</b>
+On the software side of things, one challenge I encountered is that all code was "paused" or blocked whenever the animation played (which is constantly). This made the project unresponsive. To solve that, first I changed the GIF to a series of PNG images. Then every 1/10th of a second I updated the image to display the next PNG in the animation. This resolved the blocking issue and I can control the speed of the animation.
+
+<b>SD Card Troubles</b>
+Adding an SD card slot to the project was surprisingly difficult. I followed a couple tutorials, ran my code through a simulator to ensure it works, verified my wiring several times, swapped out every part to ensure I wasn't using defective parts, asked for help from the Arduino Discord community. And it still didn't work. Stumped, I deviated from what the guides said and moved the Chip Select (CS) wire from pin 5 to 13. And it worked, I could now read from/write to an SD card. I'll explain why this worked but it will get technical, so feel free to skip it.
+
+When wiring a single component to a micro controller (in this case a SD card slot to an ESP32), the standard is to connect the Chip Select (CS) wire to pin 5 on the ESP32. However, using pin 5 is the cause of my issue. That's because pin 5 is what's known as a "Strapping Pin". And when the ESP32 boots up, strapping pins are pulled high, this can interfere with the initialization of certain components, like a SD card slot. So, once I found the cause, it was easy to fix. I swapped my chip select from pin 5 to 13, and it worked flawlessly.
+
+Once I got the SD card working on its own, I tried adding it to my existing project. But it didn't work for some reason. After some testing, I found that the SD card slot wasn't getting enough power because of a faulty breadboard rail (faulty hardware). So, I replaced the breadboard and got it working.
+
+<b>Image Display</b>
+The last problem I'll mention involves displaying images on the LCD screen. Originally, I did have image display working using code examples from the 'TFT eSPI' and 'PNGdec' libraries. But sometime later the images stopped displaying even though my code hasn't changed.
+
+To troubleshoot this, I opened a code example for displaying images, specifically the 'sdcard_slideshow' example from the 'PNGdec' library. Changed the bare minimum code so it works with my hardware. Looked for any differences between this example and my project code. I found 2 lines in my code that weren't in the example, removed them, and now the images display. It turns out the TFT eSPI library was updated, and this update broke my code.
