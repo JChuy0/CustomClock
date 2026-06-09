@@ -15,7 +15,7 @@ AudioOutputI2S *out;
 
 void testAlarm() {
   // year month day hour minute second
-  rtc.adjust(DateTime(2025, 1, 1, 18, 44, 40));
+  rtc.adjust(DateTime(2025, 1, 1, 18, 44, 50));
 
   updateAlarmHour = 18;
   updateAlarmMinute = 45;
@@ -28,6 +28,7 @@ void alarmSetup() {
   file = new AudioFileSourceSD("/alarm.mp3");
   out = new AudioOutputI2S();
   out->SetPinout(33, 25, 32);  // BCLK, LRC, DOUT
+  out->SetGain(0.5);  // changes volume
   mp3 = new AudioGeneratorMP3();
   mp3->begin(file, out);
 }
@@ -63,6 +64,7 @@ int setAlarmMinute() {
 // Checks if it's time for the alarm to go off
 void checkAlarm() {
   DateTime now = rtc.now();
+
 
   // The alarm will continue to ring until it is turned off
   if (isAlarmOn && (now.hour() == updateAlarmHour) && (now.minute() == updateAlarmMinute) && (now.second() == 0) ) {
