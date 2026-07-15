@@ -1,5 +1,5 @@
 #include "AirSensor.h"
-#include "Adafruit_BME680.h"
+
 
 Adafruit_BME680 bme; // I2C
 

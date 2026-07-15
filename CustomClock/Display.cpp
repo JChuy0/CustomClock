@@ -1,6 +1,6 @@
 #include "Display.h"
 
-// #define FileSys LittleFS
+#define FileSys LittleFS
 #define MAX_IMAGE_WIDTH 240
 
 TFT_eSPI tft = TFT_eSPI();
@@ -25,6 +25,11 @@ void setupScreen() {
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
   tft.setRotation(3);
+
+  if (!FileSys.begin()) {
+    Serial.println("LittleFS initialisation failed!");
+    while (1) yield(); // Stay here twiddling thumbs waiting
+  }
 }
 
 void resetScreen() {
@@ -85,9 +90,10 @@ void displayAlarmOnOff(bool alarmOnOff, const char* label) {
 }
 
 
+
 void * myOpen(const char *fileName, int32_t *size) {
   // Serial.printf("Attempting to open %s\n", fileName);
-  myFile = SD.open(fileName);
+  myFile = FileSys.open(fileName);
   *size = myFile.size();
   return &myFile;
 }
@@ -119,12 +125,15 @@ int PNGDraw(PNGDRAW *pDraw) {
 void loadAnimation(const char* filePath) {
   imageCount = 0;
 
-  // Scan SD card and load any *.png files
-  File root = SD.open(filePath);
+  // Scan LittleFS and load any *.png files
+  File root = LittleFS.open(filePath, "r");
 
   // Loads the filepath for each image into the array
   while (File file = root.openNextFile()) {
     String strName = file.path();
+
+    // Serial.print("strName: ");
+    // Serial.println(strName);
 
     // If it is not a directory and filename ends in .png then load it
     if (!file.isDirectory() && strName.endsWith(".png")) {

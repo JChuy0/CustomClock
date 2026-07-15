@@ -1,13 +1,11 @@
 #ifndef ALARM_H
 #define ALARM_H
 
-#include "RTClib.h"
-
-#include "SD.h"
-#include "SPI.h"
-#include "AudioFileSourceSD.h"
-#include "AudioGeneratorMP3.h"
-#include "AudioOutputI2S.h"
+#include <SPI.h>
+#include <RTClib.h>
+#include <AudioFileSourceLittleFS.h>
+#include <AudioGeneratorMP3.h>
+#include <AudioOutputI2S.h>
 
 extern RTC_DS1307 rtc;
 

@@ -2,15 +2,11 @@
 
 int updateAlarmHour = 0;
 int updateAlarmMinute = 0;
-
 bool isAlarmOn = false;
-// bool isAlarmRinging = false;
-
 
 AudioGeneratorMP3 *mp3;
-AudioFileSourceSD *file;
+AudioFileSourceLittleFS *file;
 AudioOutputI2S *out;
-
 
 
 void testAlarm() {
@@ -25,14 +21,13 @@ void testAlarm() {
 
 
 void alarmSetup() {
-  file = new AudioFileSourceSD("/alarm.mp3");
+  file = new AudioFileSourceLittleFS("/alarm.mp3");
   out = new AudioOutputI2S();
   out->SetPinout(33, 25, 32);  // BCLK, LRC, DOUT
   out->SetGain(0.5);  // changes volume
   mp3 = new AudioGeneratorMP3();
   mp3->begin(file, out);
 }
-
 
 
 int setAlarmHour() {
@@ -65,7 +60,6 @@ int setAlarmMinute() {
 void checkAlarm() {
   DateTime now = rtc.now();
 
-
   // The alarm will continue to ring until it is turned off
   if (isAlarmOn && (now.hour() == updateAlarmHour) && (now.minute() == updateAlarmMinute) && (now.second() == 0) ) {
     isAlarmRinging = true;
@@ -79,6 +73,11 @@ void checkAlarm() {
 void alarmBuzzer() {
   if (mp3->isRunning()) {
     if (!mp3->loop()) mp3->stop();
+  } else {
+    delay(2000);
+
+    file = new AudioFileSourceLittleFS("/alarm.mp3");
+    mp3->begin(file, out);
   }
 }
 

@@ -11,8 +11,8 @@
 
 // Libraries
 #include <Arduino.h>
-#include "Wire.h" // Enables I2C communication
-#include "SPI.h"  // Enables SPI communication
+#include <Wire.h> // Enables I2C communication
+#include <SPI.h>  // Enables SPI communication
 #include "Data_Types.h"
 #include "Display.h"
 
@@ -31,8 +31,8 @@ bool isAlarmRinging = false;
 volatile uint64_t lastPulse;
 volatile uint64_t lastBMEReading;
 volatile uint64_t lastImageUpdate;
+volatile uint64_t lastClockUpdate;
 
-#include "SDCard.h"
 #include "AirSensor.h"
 #include "Clock.h"
 #include "Alarm.h"
@@ -47,7 +47,6 @@ void setup() {
   delay(3000);   // add a brief pause so the serial monitor can start up
 
   Wire.begin(21, 22);
-  setupSDCard();
   setupScreen();
   setupRTC();
   setupBME680();
@@ -113,18 +112,26 @@ void handleMenu() {
 
   switch(menu) {
     case 0:
-      // Get a new reading from BME680 every X minutes
-      if(now - lastBMEReading >= 5000) {    // currently get update every 5 seconds          <===  CHANGE THIS WHEN DONE TESTING
+      // Update BME680 every X milliseconds
+      if(now - lastBMEReading >= 60000) {    // currently get update every 60 seconds          <===  CHANGE THIS WHEN DONE TESTING
         lastBMEReading = now;
         airData = readBME680();
       }
 
-      if (now -lastImageUpdate >= 100) {
-        lastImageUpdate = now;
-        displayImage();
+      // Update the image every X milliseconds
+      if (isAlarmRinging == false) {
+        if (now - lastImageUpdate >= 120) {
+          lastImageUpdate = now;
+          displayImage();
+        }
       }
 
-      displayClock(getCurrentTime(), airData, alarmOnOffValue);
+      // Update the displayed time every X milliseconds
+      if (now - lastClockUpdate >= 60000) {
+        lastClockUpdate = now;
+        displayClock(getCurrentTime(), airData, alarmOnOffValue);
+      }
+
       checkAlarm();
       break;
     case 1: 

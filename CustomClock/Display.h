@@ -2,12 +2,11 @@
 #define DISPLAY_H
 
 #include <FS.h>
-#include <SD.h>
-#include "Data_Types.h"
-#include "TFT_eSPI.h"
-#include "RTClib.h"
-// #include <LittleFS.h>
+#include <TFT_eSPI.h>
+#include <RTClib.h>
+#include <LittleFS.h>
 #include <PNGdec.h>
+#include "Data_Types.h"
 
 void setupScreen();
 void resetScreen();
