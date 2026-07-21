@@ -36,7 +36,7 @@ void resetScreen() {
   tft.fillScreen(TFT_BLACK);
 }
 
-void displayClock(DateTime currTime, BME680Data airData, bool alarmOnOffValue) {
+void displayClock(BME680Data airData, bool alarmOnOffValue) {
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // Air Sensor Data
@@ -56,7 +56,7 @@ void displayClock(DateTime currTime, BME680Data airData, bool alarmOnOffValue) {
 
   // Clock
   char timeStr[10];
-  sprintf(timeStr, "%02d:%02d:%02d", currTime.hour(), currTime.minute(), currTime.second());
+  sprintf(timeStr, "%02d:%02d:%02d", clockTime.hour, clockTime.minute, clockTime.second);
 
   tft.setTextSize(2);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);

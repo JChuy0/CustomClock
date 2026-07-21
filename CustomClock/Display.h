@@ -8,9 +8,11 @@
 #include <PNGdec.h>
 #include "Data_Types.h"
 
+extern timeData clockTime;
+
 void setupScreen();
 void resetScreen();
-void displayClock(DateTime currTime, BME680Data airData, bool alarmOnOffValue);
+void displayClock(BME680Data airData, bool alarmOnOffValue);
 void displayTimeEditor(timeData &time, const char* label);
 void displayAlarmOnOff(bool alarmOnOff, const char* label);
 

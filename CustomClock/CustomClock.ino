@@ -116,20 +116,21 @@ void handleMenu() {
       if(now - lastBMEReading >= 60000) {    // currently get update every 60 seconds          <===  CHANGE THIS WHEN DONE TESTING
         lastBMEReading = now;
         airData = readBME680();
+        getCurrentTime();
       }
 
       // Update the image every X milliseconds
       if (isAlarmRinging == false) {
-        if (now - lastImageUpdate >= 120) {
+        if (now - lastImageUpdate >= 100) {
           lastImageUpdate = now;
           displayImage();
         }
       }
 
       // Update the displayed time every X milliseconds
-      if (now - lastClockUpdate >= 60000) {
+      if (now - lastClockUpdate >= 1000) {
         lastClockUpdate = now;
-        displayClock(getCurrentTime(), airData, alarmOnOffValue);
+        displayClock(airData, alarmOnOffValue);
       }
 
       checkAlarm();

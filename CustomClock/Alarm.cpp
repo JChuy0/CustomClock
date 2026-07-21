@@ -67,12 +67,16 @@ void checkAlarm() {
 
   if (isAlarmRinging) {
     alarmBuzzer();
+  } else {
+    mp3->stop();
   }
 }
 
 void alarmBuzzer() {
   if (mp3->isRunning()) {
-    if (!mp3->loop()) mp3->stop();
+    if (!mp3->loop()) {
+      mp3->stop();
+    }
   } else {
     delay(2000);
 

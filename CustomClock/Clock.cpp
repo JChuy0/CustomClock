@@ -23,12 +23,14 @@ void setupRTC() {
   }
 }
 
-DateTime getCurrentTime() {
+void getCurrentTime() {
   DateTime now = rtc.now(); 
   updateClockHour = now.hour();
   updateClockMinute = now.minute();
 
-  return now;
+  clockTime.hour = now.hour();
+  clockTime.minute = now.minute();
+  clockTime.second = now.second();
 }
 
 int setClockHour() {
