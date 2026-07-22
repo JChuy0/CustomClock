@@ -12,7 +12,7 @@ extern timeData clockTime;
 
 void setupScreen();
 void resetScreen();
-void displayClock(BME680Data airData, bool alarmOnOffValue);
+void displayClock(timeData &clockTime, BME680Data airData, bool alarmOnOffValue);
 void displayTimeEditor(timeData &time, const char* label);
 void displayAlarmOnOff(bool alarmOnOff, const char* label);
 

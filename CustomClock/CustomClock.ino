@@ -14,7 +14,7 @@
 #include <Wire.h> // Enables I2C communication
 #include <SPI.h>  // Enables SPI communication
 #include "Data_Types.h"
-#include "Display.h"
+#include <Display.h>
 
 // Initialize the pins
 #define ENCODER_CLK 26
@@ -73,8 +73,6 @@ void readButton() {
     menu++;
   }
 
-  // See if I can find a way to decouple isAlarmRinging
-
   // Turns alarm off when button is pressed
   if (isAlarmRinging) {
     isAlarmRinging = false;
@@ -116,7 +114,7 @@ void handleMenu() {
       if(now - lastBMEReading >= 60000) {    // currently get update every 60 seconds          <===  CHANGE THIS WHEN DONE TESTING
         lastBMEReading = now;
         airData = readBME680();
-        getCurrentTime();
+        getCurrentTime(clockTime);
       }
 
       // Update the image every X milliseconds
@@ -130,28 +128,28 @@ void handleMenu() {
       // Update the displayed time every X milliseconds
       if (now - lastClockUpdate >= 1000) {
         lastClockUpdate = now;
-        displayClock(airData, alarmOnOffValue);
+        displayClock(clockTime, airData, alarmOnOffValue);
       }
 
       checkAlarm();
       break;
-    case 1: 
-      clockTime.hour = setClockHour();
+    case 1:
+      setClockHour(clockTime);
       displayTimeEditor(clockTime, "Set Clock Hour");
       break;
-    case 2: 
-      clockTime.minute = setClockMinute();
+    case 2:
+      setClockMinute(clockTime);
       displayTimeEditor(clockTime, "Set Clock Minute");
       break;
-    case 3: 
-      alarmTime.hour = setAlarmHour();
+    case 3:
+      setAlarmHour(alarmTime);
       displayTimeEditor(alarmTime, "Set Alarm Hour  ");
       break;
-    case 4: 
-      alarmTime.minute = setAlarmMinute();
+    case 4:
+      setAlarmMinute(alarmTime);
       displayTimeEditor(alarmTime, "Set Alarm Minute");
       break;
-    case 5: 
+    case 5:
       alarmOnOffValue = turnAlarmOnOff();
       displayAlarmOnOff(alarmOnOffValue, "Alarm is: ");  // This will display a label while in edit mode, but not in display mode
       break;

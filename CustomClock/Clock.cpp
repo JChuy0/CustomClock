@@ -23,7 +23,7 @@ void setupRTC() {
   }
 }
 
-void getCurrentTime() {
+void getCurrentTime(timeData &clockTime) {
   DateTime now = rtc.now(); 
   updateClockHour = now.hour();
   updateClockMinute = now.minute();
@@ -33,7 +33,7 @@ void getCurrentTime() {
   clockTime.second = now.second();
 }
 
-int setClockHour() {
+void setClockHour(timeData &clockTime) {
   updateClockHour += encoderValue;
   encoderValue = 0;
 
@@ -43,10 +43,10 @@ int setClockHour() {
     updateClockHour = 0;
   }
 
-  return updateClockHour;
+  clockTime.hour = updateClockHour;
 }
 
-int setClockMinute() {
+void setClockMinute(timeData &clockTime) {
   updateClockMinute += encoderValue;
   encoderValue = 0;
 
@@ -56,7 +56,7 @@ int setClockMinute() {
     updateClockMinute = 0;
   }
 
-  return updateClockMinute;
+  clockTime.minute = updateClockMinute;
 }
 
 // Updates the time on the clock module

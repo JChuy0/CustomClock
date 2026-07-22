@@ -6,6 +6,8 @@
 #include <AudioFileSourceLittleFS.h>
 #include <AudioGeneratorMP3.h>
 #include <AudioOutputI2S.h>
+#include "Data_Types.h"
+
 
 extern RTC_DS1307 rtc;
 
@@ -13,8 +15,8 @@ extern bool isAlarmRinging;
 extern int encoderValue;
 
 void alarmSetup();
-int setAlarmHour();
-int setAlarmMinute();
+void setAlarmHour(timeData &alarmTime);
+void setAlarmMinute(timeData &alarmTime);
 
 void checkAlarm();
 void alarmBuzzer();

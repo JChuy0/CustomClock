@@ -36,7 +36,7 @@ void resetScreen() {
   tft.fillScreen(TFT_BLACK);
 }
 
-void displayClock(BME680Data airData, bool alarmOnOffValue) {
+void displayClock(timeData &clockTime, BME680Data airData, bool alarmOnOffValue) {
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // Air Sensor Data

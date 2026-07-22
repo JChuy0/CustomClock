@@ -30,7 +30,7 @@ void alarmSetup() {
 }
 
 
-int setAlarmHour() {
+void setAlarmHour(timeData &alarmTime) {
   updateAlarmHour += encoderValue;
   encoderValue = 0;
 
@@ -40,10 +40,10 @@ int setAlarmHour() {
     updateAlarmHour = 0;
   }
 
-  return updateAlarmHour;
+  alarmTime.hour = updateAlarmHour;
 }
 
-int setAlarmMinute() {
+void setAlarmMinute(timeData &alarmTime) {
   updateAlarmMinute += encoderValue;
   encoderValue = 0;
 
@@ -53,7 +53,7 @@ int setAlarmMinute() {
     updateAlarmMinute = 0;
   }
 
-  return updateAlarmMinute;
+  alarmTime.minute = updateAlarmMinute;
 }
 
 // Checks if it's time for the alarm to go off

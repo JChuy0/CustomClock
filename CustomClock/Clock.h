@@ -5,12 +5,11 @@
 #include "Data_Types.h"
 
 extern int encoderValue;
-extern timeData clockTime;
 
 void setupRTC();
-void getCurrentTime();
-int setClockHour();
-int setClockMinute();
+void getCurrentTime(timeData &clockTime);
+void setClockHour(timeData &clockTime);
+void setClockMinute(timeData &clockTime);
 void updateRTC();
 
 #endif
